@@ -1,0 +1,204 @@
+#include "value.h"
+#include "interpreter.h"
+#include "talloc.h"
+#include "parser.h"
+#include "linkedlist.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+
+Value *eval(Value *expr, Frame *frame);
+
+void error(int status){
+    switch (status){
+        case 1: {
+            printf("Error! :(\n" );
+        }
+        case 2: {
+            printf("Evaluation error: not a recognized special form.\n");
+        }
+        case 3: {
+            printf("Error: incorrect number of arguments.\n");
+        }
+        case 4: {
+            printf("Error: first argument in IF should be a boolean\n");
+        }
+        case 5: {
+            printf("Error: undefined symbol\n");
+        }
+    }
+    texit(1);
+}
+
+Value *evalIf(Value *args, Frame *frame){
+    if (length(args) != 3){
+        error(3);
+    }
+    Value *condition = eval(car(args), frame);
+    if (condition->type != BOOL_TYPE){
+        error(4);
+    }
+    if (condition->i){
+        return eval(cdr(args), frame);
+    } else {
+        return eval(cdr(cdr(args)), frame);
+    }
+}
+
+Value *evalLet(Value *args, Frame *frame){
+    printf("at evalLet\n");
+    if (length(args) != 2){
+        error(3);
+    }
+    printf("cdr args\n");
+    printTree(cdr(args));
+    Frame *newFrame = talloc(sizeof(Frame));
+    newFrame->parent = frame;
+    newFrame->bindings = makeNull();
+    while (args->type != NULL_TYPE){
+        printf("hullo\n");
+        //assert(car(car(car(args)))->type == SYMBOL_TYPE);
+        Value *value = car(car(car(args)));
+        printf("%s\n", value->s);
+        printf("value:\n");
+        printTree(value);
+        printf("\n");
+        Value *evalu = eval(car(cdr(car(args))), frame);
+        printf("evalu:\n");
+        printTree(evalu);
+        printf("\n");
+        Value *cell = cons(value, evalu);
+        newFrame->bindings = cons(cell, newFrame->bindings);
+    }
+    return eval(cdr(args), newFrame);
+}
+
+
+Value *lookUpSymbol(Value *expr, Frame *frame){
+    Frame *currentFrame = frame;
+    while (currentFrame->parent != NULL){
+        Value *currentBinding = currentFrame->bindings;
+        while (currentBinding->type != NULL_TYPE){
+            if (strcmp(car(car(currentBinding))->s, expr->s)){
+                return cdr(car(currentBinding));
+            }
+            currentBinding = cdr(currentBinding);
+        }
+        currentFrame = currentFrame->parent;
+    }
+    error(5);
+    return expr;
+}
+
+Value *eval(Value *expr, Frame *frame){
+    printTree(expr);
+    printf("\n");
+    switch (expr->type){
+        case INT_TYPE: {
+            return expr;
+            break;
+        }
+        case SYMBOL_TYPE: {
+            return lookUpSymbol(expr, frame);
+            break;
+        }
+        case STR_TYPE: {
+            return expr;
+            break;
+        }
+        case CONS_TYPE: {
+            Value *first = car(expr);
+            Value *args = cdr(expr);
+            Value *result;
+            //printf("cons\n");
+            //printTree(expr);
+            printf("%i\n", first->type);
+            //display(expr);
+            //printf("\n");
+            //display(car(cdr(expr)));
+            printTreeValue(first);
+
+            //assert(first->type == CLOSEBRACKET_TYPE);
+            //assert(first->type == SYMBOL_TYPE);
+
+            printTree(args);
+
+            if (!strcmp(first->s, "if")){
+                result = evalIf(args, frame);
+            } else if (!strcmp(first->s, "let")){
+                result = evalLet(args, frame);
+            } else {
+                error(2);
+            }
+            return result;
+            break;
+        }
+        case DOUBLE_TYPE: {
+            return expr;
+            break;
+        }
+        case BOOL_TYPE: {
+            return expr;
+            break;
+        }
+        default: {
+            error(1);
+            break;
+        }
+    }
+    return expr;
+}
+
+
+//Helper function for printTree
+void printTreeValue(Value *value){
+    switch (value->type){
+            case INT_TYPE:
+                printf("%i", value->i);
+                break;
+            case DOUBLE_TYPE:
+                printf("%f", value->d);
+                break;
+            case STR_TYPE:
+                printf("%s", value->s);
+                break;
+            case PTR_TYPE:
+                printf("%p", value->p);
+                break;
+            case SYMBOL_TYPE:
+                printf("%s", value->s);
+                break;
+            case OPEN_TYPE:
+                printf("(");
+                break;
+            case CLOSE_TYPE:
+                printf(")");
+                break;
+            case NULL_TYPE:
+                printf("()");
+                break;
+            default:
+                break;
+        }
+}
+
+
+void interpret(Value *tree){
+    Frame *frame = talloc(sizeof(Frame));
+    frame->parent = NULL;
+    frame->bindings = makeNull();
+    Value *current = tree;
+    while (current->type != NULL_TYPE){
+        //printf("I made it bitch!\n");
+        printTreeValue(eval(car(current), frame));
+        current = cdr(current);
+    }
+}
+
+
+
+
+
+//
