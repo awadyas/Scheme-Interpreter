@@ -52,14 +52,29 @@ Value *evalLet(Value *args, Frame *frame){
     if (length(args) != 2){
         error(3);
     }
+    printf("Car of args: ");
+    printTree(car(args));
+    Value *inner = car(car(args));
+    printf("\nCar of car of args (aka \"inner\"): ");
+    printTree(car(car(args)));
+    printf("\nType of \"inner\": %i\n", car(car(args))->type);
+    printf("I can take the cdr of inner: ");
+    printTree(cdr(inner));
+    printf("\n");
+    printf("I should be able to take car(inner). Here is it's type: ");
+    printf("%i", inner->c.car->type);
+    //printTree(inner->c.car);
+    printf("hhhhhhh\n");
+
     printf("Cdr of args: ");
     printTree(cdr(args));
     printf("\n");
+
     Frame *newFrame = talloc(sizeof(Frame));
     newFrame->parent = frame;
     newFrame->bindings = makeNull();
     while (args->type != NULL_TYPE){
-        //assert(car(car(car(args)))->type == SYMBOL_TYPE);
+        assert(car(car(car(args)))->type == SYMBOL_TYPE);
         Value *value = car(car(args));
         printf("Value: ");
         printTree(value);
@@ -118,23 +133,22 @@ Value *eval(Value *expr, Frame *frame){
             Value *result;
             //printf("cons\n");
             //printTree(expr);
-            printf("First's type: %i\n", first->type);
+            //printf("First's type: %i\n", first->type);
             //display(expr);
             //printf("\n");
             //display(car(cdr(expr)));
-            printf("First->s: ");
-            //printTreeValue(first);
-            printf("%s\n", first->s);
+            //printf("First->s: ");
+            //printf("%s\n", first->s);
 
-            //assert(first->type == CLOSEBRACKET_TYPE);
-            //assert(first->type == SYMBOL_TYPE);
-            printf("Args: ");
-            printTree(args);
-            printf("\n");
+            assert(first->type == SYMBOL_TYPE);
+            //printf("Args: ");
+            //printTree(args);
+            //printf("\n");
 
             if (!strcmp(first->s, "if")){
                 result = evalIf(args, frame);
             } else if (!strcmp(first->s, "let")){
+                printf("First->s is let, let's do evalLet\n");
                 result = evalLet(args, frame);
             } else {
                 error(2);

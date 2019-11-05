@@ -9,11 +9,9 @@
 int main() {
 
     Value *list = tokenize(stdin);
-    printf("Type of what should be let: %i\n", car(cdr(list))->type);
-    //printf("tokenized\n");
     Value *tree = parse(list);
     printf("Parsing complete (in main.c)\n");
-    displayTokens(list);
+    //displayTokens(list);
 
     //printTree(tree);
     interpret(tree);
