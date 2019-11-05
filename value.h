@@ -1,10 +1,14 @@
 #ifndef _VALUE
 #define _VALUE
 
-// OPENBRACKET_TYPE and CLOSEBRACKET_TYPE are only for the bonus
-typedef enum {INT_TYPE,DOUBLE_TYPE,STR_TYPE,CONS_TYPE,NULL_TYPE,PTR_TYPE,
-              OPEN_TYPE,CLOSE_TYPE,BOOL_TYPE,SYMBOL_TYPE,
-              OPENBRACKET_TYPE, CLOSEBRACKET_TYPE} valueType;
+typedef enum {
+    INT_TYPE, DOUBLE_TYPE, STR_TYPE, CONS_TYPE, NULL_TYPE, PTR_TYPE,
+    OPEN_TYPE, CLOSE_TYPE, BOOL_TYPE, SYMBOL_TYPE,
+    
+    // Types below are only for bonus work
+    OPENBRACKET_TYPE, CLOSEBRACKET_TYPE, DOT_TYPE, SINGLEQUOTE_TYPE,
+    VOID_TYPE
+} valueType;
 
 struct Value {
     valueType type;
@@ -19,9 +23,21 @@ struct Value {
         } c;
     };
 };
-// Where to you store a boolean in the union? It's up to you, but I used an int
+// Where do you store a boolean in the union? It's up to you, but I used an int
 // (0 for false, 1 for true) in my own solution.
 
 typedef struct Value Value;
+
+// A frame is a linked list of bindings, and a pointer to another frame.  A
+// binding is a variable name (represented as a string), and a pointer to the
+// Value it is bound to. Specifically how you implement the list of bindings is
+// up to you.
+struct Frame {
+    Value *bindings;
+    struct Frame *parent;
+};
+
+typedef struct Frame Frame;
+
 
 #endif

@@ -48,25 +48,26 @@ Value *evalIf(Value *args, Frame *frame){
 }
 
 Value *evalLet(Value *args, Frame *frame){
-    printf("at evalLet\n");
+    printf("In evalLet!\n");
     if (length(args) != 2){
         error(3);
     }
-    printf("cdr args\n");
+    printf("Cdr of args: ");
     printTree(cdr(args));
+    printf("\n");
     Frame *newFrame = talloc(sizeof(Frame));
     newFrame->parent = frame;
     newFrame->bindings = makeNull();
     while (args->type != NULL_TYPE){
-        printf("hullo\n");
         //assert(car(car(car(args)))->type == SYMBOL_TYPE);
-        Value *value = car(car(car(args)));
-        printf("%s\n", value->s);
-        printf("value:\n");
+        Value *value = car(car(args));
+        printf("Value: ");
         printTree(value);
         printf("\n");
+        printf("Car(value)->s: %s\n", car(value)->s);
+        printf("value->type: %i\n", value->type);
         Value *evalu = eval(car(cdr(car(args))), frame);
-        printf("evalu:\n");
+        printf("Evaluated :");
         printTree(evalu);
         printf("\n");
         Value *cell = cons(value, evalu);
@@ -93,6 +94,7 @@ Value *lookUpSymbol(Value *expr, Frame *frame){
 }
 
 Value *eval(Value *expr, Frame *frame){
+    printf("We are now in eval(), evaluating this: ");
     printTree(expr);
     printf("\n");
     switch (expr->type){
@@ -101,6 +103,7 @@ Value *eval(Value *expr, Frame *frame){
             break;
         }
         case SYMBOL_TYPE: {
+            printf("switch: SYMBOL_TYPE\n");
             return lookUpSymbol(expr, frame);
             break;
         }
@@ -109,21 +112,25 @@ Value *eval(Value *expr, Frame *frame){
             break;
         }
         case CONS_TYPE: {
+            printf("switch: CONS_TYPE\n");
             Value *first = car(expr);
             Value *args = cdr(expr);
             Value *result;
             //printf("cons\n");
             //printTree(expr);
-            printf("%i\n", first->type);
+            printf("First's type: %i\n", first->type);
             //display(expr);
             //printf("\n");
             //display(car(cdr(expr)));
-            printTreeValue(first);
+            printf("First->s: ");
+            //printTreeValue(first);
+            printf("%s\n", first->s);
 
             //assert(first->type == CLOSEBRACKET_TYPE);
             //assert(first->type == SYMBOL_TYPE);
-
+            printf("Args: ");
             printTree(args);
+            printf("\n");
 
             if (!strcmp(first->s, "if")){
                 result = evalIf(args, frame);
@@ -191,8 +198,10 @@ void interpret(Value *tree){
     frame->bindings = makeNull();
     Value *current = tree;
     while (current->type != NULL_TYPE){
-        //printf("I made it bitch!\n");
-        printTreeValue(eval(car(current), frame));
+        printf("Evaluating... ");
+        printTree(car(current));
+        printf("\n");
+        eval(car(current), frame);
         current = cdr(current);
     }
 }
