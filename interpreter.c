@@ -33,6 +33,7 @@ void error(int status){
 }
 
 Value *evalIf(Value *args, Frame *frame){
+    printf("I made it to evalIf! :)\n");
     if (length(args) != 3){
         error(3);
     }
@@ -41,9 +42,11 @@ Value *evalIf(Value *args, Frame *frame){
         error(4);
     }
     if (condition->i){
-        return eval(cdr(args), frame);
+        printf("Evaluating #t\n");
+        return eval(car(cdr(args)), frame);
     } else {
-        return eval(cdr(cdr(args)), frame);
+        printf("Evaluating #f\n");
+        return eval(car(cdr(cdr(args))), frame);
     }
 }
 
@@ -64,7 +67,7 @@ Value *evalLet(Value *args, Frame *frame){
     printf("I should be able to take car(inner). Here is it's type: ");
     printf("%i", inner->c.car->type);
     //printTree(inner->c.car);
-    printf("hhhhhhh\n");
+    //printf("\nhhhhhhh\n");
 
     printf("Cdr of args: ");
     printTree(cdr(args));
@@ -75,6 +78,7 @@ Value *evalLet(Value *args, Frame *frame){
     newFrame->bindings = makeNull();
     Value *currentVal = args;
     while (cdr(currentVal)->type != NULL_TYPE){
+        printf("I made a new Frame. currentVal is: ");
         printTree(currentVal);
         printf("\n");
         assert(car(car(car(currentVal)))->type == SYMBOL_TYPE);
@@ -91,7 +95,11 @@ Value *evalLet(Value *args, Frame *frame){
         printf("Evaluated : ");
         //printTree(evalu);
         printf("\n");
-        Value *cell = cons(value, evalu);
+        Value *cell = cons(car(value), evalu);
+        printf("These are the symbols that I am storing: ");
+        printTreeValue(car(cell));
+        printTreeValue(cdr(cell));
+        //printTree(cell);
         newFrame->bindings = cons(cell, newFrame->bindings);
         currentVal = cdr(currentVal);
         printf("I made it to the end of the loop!\n");
@@ -101,11 +109,16 @@ Value *evalLet(Value *args, Frame *frame){
 
 
 Value *lookUpSymbol(Value *expr, Frame *frame){
+    printf("I am in lookUpSymbol\n");
     Frame *currentFrame = frame;
     while (currentFrame->parent != NULL){
         Value *currentBinding = currentFrame->bindings;
         while (currentBinding->type != NULL_TYPE){
-            if (strcmp(car(car(currentBinding))->s, expr->s)){
+            printf("currentBinding: ");
+            printTreeValue(car(car(currentBinding)));
+            printf("\n");
+            printf("expr->s: %s\n", expr->s);
+            if (!strcmp(car(car(currentBinding))->s, expr->s)){
                 return cdr(car(currentBinding));
             }
             currentBinding = cdr(currentBinding);
@@ -139,9 +152,16 @@ Value *eval(Value *expr, Frame *frame){
         case CONS_TYPE: {
             printf("switch: CONS_TYPE\n");
             Value *temp = car(expr);
-            printTree(temp);
+            if (temp->type == CONS_TYPE){
+                printTree(temp);
+                printf("\n");
+            }
             Value *first = car(temp);
-            printTree(first);
+            if (first->type == CONS_TYPE){
+                printTree(first);
+                printf("\n");
+   
+            }
             Value *args = cdr(temp);
             Value *result;
             //printf("cons\n");
@@ -161,6 +181,7 @@ Value *eval(Value *expr, Frame *frame){
             //printf("\n");
 
             if (!strcmp(first->s, "if")){
+                printf("Hello I recognized the if!\n");
                 result = evalIf(args, frame);
             } else if (!strcmp(first->s, "let")){
                 printf("First->s is let, let's do evalLet\n");
@@ -176,7 +197,7 @@ Value *eval(Value *expr, Frame *frame){
             break;
         }
         case BOOL_TYPE: {
-            printf("made it to bool\n");
+            printf("\nmade it to bool\n");
             return expr;
             break;
         }
@@ -235,6 +256,9 @@ void interpret(Value *tree){
         Value *answer = eval(current, frame);
         //need to print answer
         current = cdr(current);
+        printf("ANSWER!!! : \n");
+        printTreeValue(answer);
+        printf("\n");
     }
 }
 
