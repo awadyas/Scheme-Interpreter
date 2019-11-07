@@ -19,3 +19,5 @@ int main() {
     tfree();
     return 0;
 }
+
+// TODO: strings should be printed in quotes or nah?
