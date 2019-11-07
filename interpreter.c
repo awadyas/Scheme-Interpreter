@@ -260,7 +260,7 @@ void interpret(Value *tree){
     Value *current = tree;
     while (current->type != NULL_TYPE){
         printf("Evaluating... ");
-        printTree(car(current));
+        //printTree(car(current));
         printf("\n");
         //eval(car(current), frame);
         Value *answer = eval(current, frame);
