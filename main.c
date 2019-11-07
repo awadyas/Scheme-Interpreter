@@ -10,14 +10,7 @@ int main() {
 
     Value *list = tokenize(stdin);
     Value *tree = parse(list);
-    printf("Parsing complete (in main.c)\n");
-    //displayTokens(list);
-
-    //printTree(tree);
     interpret(tree);
-    printf("Interpretation complete (in main.c)\n");
     tfree();
     return 0;
 }
-
-// TODO: strings should be printed in quotes or nah?

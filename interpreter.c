@@ -9,8 +9,6 @@
 #include <string.h>
 
 
-//Value *eval(Value *expr, Frame *frame);
-
 void error(int status){
     switch (status){
         case 1: {
@@ -18,11 +16,11 @@ void error(int status){
             break;
         }
         case 2: {
-            printf("Evaluation error: not a recognized special form.\n");
+            printf("Evaluation error: not a recognized special form\n");
             break;
         }
         case 3: {
-            printf("Error: incorrect number of arguments.\n");
+            printf("Error: incorrect number of arguments\n");
             break;
         }
         case 4: {
@@ -63,9 +61,10 @@ Value *evalLet(Value *args, Frame *frame){
     newFrame->bindings = makeNull();
     Value *currentVal = car(args);
     while (currentVal->type != NULL_TYPE){
+
         assert(car(car(currentVal))->type == SYMBOL_TYPE);
         Value *value = car(currentVal);
-        Value *evalu = eval(car(cdr(value)), frame);
+        Value *evalu = eval(cdr(value), frame);
         Value *cell = cons(car(value), evalu);
         newFrame->bindings = cons(cell, newFrame->bindings);
         currentVal = cdr(currentVal);
@@ -117,6 +116,8 @@ Value *eval(Value *expr, Frame *frame){
                 result = evalIf(args, frame);
             } else if (!strcmp(first->s, "let")){
                 result = evalLet(args, frame);
+            } else if (!strcmp(first->s, "quote")){
+                result = args;
             } else {
                 error(2);
             }
@@ -150,7 +151,7 @@ void printTreeValue(Value *value){
                 printf("%f", value->d);
                 break;
             case STR_TYPE:
-                printf("%s", value->s);
+                printf("\"%s\"", value->s);
                 break;
             case PTR_TYPE:
                 printf("%p", value->p);
@@ -181,10 +182,8 @@ void interpret(Value *tree){
     while (current->type != NULL_TYPE){
         Value *answer = eval(current, frame);
         current = cdr(current);
-        if (answer->type == STR_TYPE){
-            printf("\"");
-            printTreeValue(answer);
-            printf("\"");
+        if (answer->type == CONS_TYPE){
+            printTree(answer);
         } else {
             printTreeValue(answer);
         }

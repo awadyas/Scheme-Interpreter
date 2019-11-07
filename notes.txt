@@ -9,5 +9,6 @@
   (if baz foo bar))
 (let ((x 5) (y "hello")) (if #t x y))
 (let ((x #t)) (if x 3 5))
-(if #t x y)
+
 (let ((x 3)) 2 4 x)
+(if #t x y)
