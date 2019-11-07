@@ -113,12 +113,18 @@ Value *lookUpSymbol(Value *expr, Frame *frame){
     Frame *currentFrame = frame;
     while (currentFrame->parent != NULL){
         Value *currentBinding = currentFrame->bindings;
+        printTreeValue(currentBinding);
         while (currentBinding->type != NULL_TYPE){
-            printf("currentBinding: ");
-            printTreeValue(car(car(currentBinding)));
+            printf("currentBinding: \n");
+            printf("current binding type : %i\n", currentBinding->type);
+            printf("current car(binding) type : %i\n", car(currentBinding)->type);
+            printf("current car(car(binding)) type : %i\n", car(car(currentBinding))->type);
+            //printTreeValue(car(car(currentBinding)));
             printf("\n");
             printf("expr->s: %s\n", expr->s);
             if (!strcmp(car(car(currentBinding))->s, expr->s)){
+                printf("I found my value!\n");
+                printf("My value: %i\n", cdr(car(currentBinding))->i);
                 return cdr(car(currentBinding));
             }
             currentBinding = cdr(currentBinding);
@@ -155,6 +161,10 @@ Value *eval(Value *expr, Frame *frame){
             if (temp->type == CONS_TYPE){
                 printTree(temp);
                 printf("\n");
+            }
+            if (temp->type != CONS_TYPE){
+                printf("Temp isn't CONS\n");
+                return eval(temp, frame);
             }
             Value *first = car(temp);
             if (first->type == CONS_TYPE){
@@ -254,6 +264,7 @@ void interpret(Value *tree){
         printf("\n");
         //eval(car(current), frame);
         Value *answer = eval(current, frame);
+        printf("ANSWER!!! : \n");
         //need to print answer
         current = cdr(current);
         printf("ANSWER!!! : \n");
