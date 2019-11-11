@@ -20,3 +20,4 @@ phony_target:
 clean:
 	rm *.o
 	rm interpreter
+

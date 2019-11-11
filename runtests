@@ -7,8 +7,8 @@ import filecmp
 
 allTestsPass = True
 for filename in sorted(os.listdir()):
-    if filename.endswith(".rkt"):
-        m = re.match('test-in-(.*).rkt', filename)
+    m = re.match('test-in-(.*).rkt', filename)
+    if m:
         expectedOutput = 'test-out-'+m.group(1)+'.txt'
         result = subprocess.run('./interpreter',stdin=open(filename),
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)

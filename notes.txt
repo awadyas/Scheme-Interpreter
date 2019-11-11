@@ -1,14 +1,11 @@
-3
-5
-(if #f 7 12)
-(let ((x 5)) x)
-(let ((x "hello")) (let ((y "goodbye")) (if #t x y)))
-(let ((foo "hello")
-      (bar 7)
-      (baz #f))
-  (if baz foo bar))
-(let ((x 5) (y "hello")) (if #t x y))
-(let ((x #t)) (if x 3 5))
+(define not
+  (lambda (bool)
+    (if bool #f #t)))
 
-(let ((x 3)) 2 4 x)
-(if #t x y)
+(define testit
+  (lambda (cond conseq alt)
+    (let ((nconseq (not conseq)) (nalt (not alt)))
+      (if cond nconseq nalt))))
+
+(testit #t #f #t)
+(testit #f #f #t)

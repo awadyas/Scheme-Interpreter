@@ -35,6 +35,38 @@ void error(int status){
     texit(1);
 }
 
+//Helper function for printTree
+void printTreeValue(Value *value){
+    switch (value->type){
+            case INT_TYPE:
+                printf("%i", value->i);
+                break;
+            case DOUBLE_TYPE:
+                printf("%f", value->d);
+                break;
+            case STR_TYPE:
+                printf("\"%s\"", value->s);
+                break;
+            case PTR_TYPE:
+                printf("%p", value->p);
+                break;
+            case SYMBOL_TYPE:
+                printf("%s", value->s);
+                break;
+            case OPEN_TYPE:
+                printf("(");
+                break;
+            case CLOSE_TYPE:
+                printf(")");
+                break;
+            case NULL_TYPE:
+                printf("()");
+                break;
+            default:
+                break;
+        }
+}
+
 Value *evalIf(Value *args, Frame *frame){
     if (length(args) != 3){
         error(3);
@@ -72,7 +104,6 @@ Value *evalLet(Value *args, Frame *frame){
     return eval(cdr(args), newFrame);
 }
 
-
 Value *lookUpSymbol(Value *expr, Frame *frame){
     Frame *currentFrame = frame;
     while (currentFrame->parent != NULL){
@@ -85,8 +116,65 @@ Value *lookUpSymbol(Value *expr, Frame *frame){
         }
         currentFrame = currentFrame->parent;
     }
+    printTreeValue(expr);
     error(5);
     return expr;
+}
+
+Value *evalEach(Value *args, Frame *frame){
+    Value *evaledArgs = makeNull();
+    Value *current = args;
+    while (current->type != NULL_TYPE){
+        evaledArgs = cons(eval(car(current), frame), evaledArgs);
+        current = cdr(args);
+    }
+    reverse(evaledArgs);
+    return evaledArgs;
+}
+
+Value *evalDefine(Value *args, Frame *frame){
+    if (length(args) != 2){
+        error(3);
+    }
+    printTreeValue(car(args));
+    printf("\n");
+    Value *boop = cons(car(args), eval(cdr(args), frame));
+    frame->bindings = cons(boop, frame->bindings);
+    printf("%i\n", frame->bindings->type);
+    Value *voidboi = talloc(sizeof(Value));
+    voidboi->type = VOID_TYPE;
+    return voidboi;
+}
+
+Value *evalLambda(Value *args, Frame *frame){
+    if (length(args) != 2){
+        error(3);
+    }
+    Value *closure = talloc(sizeof(Value));
+    closure->type = CLOSURE_TYPE;
+    closure->cl.frame = frame;
+    closure->cl.paramNames = car(args);
+    closure->cl.functionCode = cdr(args);
+    return closure;
+}
+
+Value *apply(Value *function, Value *args){
+    assert(function->type == CLOSURE_TYPE);
+    assert(length(args) == length(function->cl.paramNames));
+    printf("I made it to apply()\n");
+    Frame *frame = talloc(sizeof(Frame));
+    frame->parent = function->cl.frame;
+    frame->bindings = makeNull();
+    
+    Value *current = args;
+    Value *currentParam = function->cl.paramNames;
+    while (current->type != NULL_TYPE){
+        Value *param = cons(car(currentParam), car(current)); 
+        frame->bindings = cons(param, frame->bindings);
+        current = cdr(current);
+        currentParam = cdr(currentParam);
+    }
+    return eval(function->cl.functionCode, frame);
 }
 
 Value *eval(Value *expr, Frame *frame){
@@ -118,8 +206,15 @@ Value *eval(Value *expr, Frame *frame){
                 result = evalLet(args, frame);
             } else if (!strcmp(first->s, "quote")){
                 result = args;
+            } else if(!strcmp(first->s, "define")){
+                result = evalDefine(args, frame);
+            } else if (!strcmp(first->s, "lambda")){
+                result = evalLambda(args, frame);
             } else {
-                error(2);
+                printf("Not a defined function - we make one!\n");
+                Value *evaledOperator = eval(first, frame);
+                Value *evaledArgs = evalEach(args, frame);
+                return apply(evaledOperator,evaledArgs);
             }
             return result;
             break;
@@ -139,40 +234,6 @@ Value *eval(Value *expr, Frame *frame){
     }
     return expr;
 }
-
-
-//Helper function for printTree
-void printTreeValue(Value *value){
-    switch (value->type){
-            case INT_TYPE:
-                printf("%i", value->i);
-                break;
-            case DOUBLE_TYPE:
-                printf("%f", value->d);
-                break;
-            case STR_TYPE:
-                printf("\"%s\"", value->s);
-                break;
-            case PTR_TYPE:
-                printf("%p", value->p);
-                break;
-            case SYMBOL_TYPE:
-                printf("%s", value->s);
-                break;
-            case OPEN_TYPE:
-                printf("(");
-                break;
-            case CLOSE_TYPE:
-                printf(")");
-                break;
-            case NULL_TYPE:
-                printf("()");
-                break;
-            default:
-                break;
-        }
-}
-
 
 void interpret(Value *tree){
     Frame *frame = talloc(sizeof(Frame));

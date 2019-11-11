@@ -11,6 +11,7 @@ int main() {
     Value *list = tokenize(stdin);
     Value *tree = parse(list);
     interpret(tree);
+
     tfree();
     return 0;
 }

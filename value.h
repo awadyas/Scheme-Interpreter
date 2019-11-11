@@ -7,7 +7,9 @@ typedef enum {
     
     // Types below are only for bonus work
     OPENBRACKET_TYPE, CLOSEBRACKET_TYPE, DOT_TYPE, SINGLEQUOTE_TYPE,
-    VOID_TYPE
+
+    // Types below are new for define/lambda portion
+    VOID_TYPE, CLOSURE_TYPE
 } valueType;
 
 struct Value {
@@ -21,23 +23,38 @@ struct Value {
             struct Value *car;
             struct Value *cdr;
         } c;
+        // For purposes of this project a closure is just another type of value,
+        // containing everything needed to execute a user-defined function: (1)
+        // a list of formal parameter names; (2) a pointer to the function body;
+        // (3) a pointer to the environment frame in which the function was
+        // created.
+        struct Closure {
+            struct Value *paramNames;
+            struct Value *functionCode;
+            struct Frame *frame;
+        } cl;
     };
 };
-// Where do you store a boolean in the union? It's up to you, but I used an int
-// (0 for false, 1 for true) in my own solution.
 
 typedef struct Value Value;
 
+
 // A frame is a linked list of bindings, and a pointer to another frame.  A
 // binding is a variable name (represented as a string), and a pointer to the
-// Value it is bound to. Specifically how you implement the list of bindings is
-// up to you.
+// Value it is bound to. I'm just going to put these in a flat list, with every
+// other element being a symbol, and the following element being the value. I
+// could do this via yet another data structure, but I think this will
+// ultimately take less coding. It also will require less modification of
+// existing code.
+
 struct Frame {
-    Value *bindings;
+    struct Value *bindings;
     struct Frame *parent;
 };
 
 typedef struct Frame Frame;
+
+
 
 
 #endif

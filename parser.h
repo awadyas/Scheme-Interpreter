@@ -12,6 +12,5 @@ Value *parse(Value *tokens);
 // Racket code; use parentheses to indicate subtrees.
 void printTree(Value *tree);
 
-void printTreeValue(Value *value);
 
 #endif
