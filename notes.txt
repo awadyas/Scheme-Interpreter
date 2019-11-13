@@ -11,8 +11,17 @@
     (lambda (bool1)
         (if bool1 #t (recursive (not bool1))))) 
 
+(define testit1 (cond conseq alt)
+    (let ((nconseq (not conseq)) (nalt (not alt)))
+      (if cond nconseq nalt)))
 
+(define tryit
+  (lambda x
+    x))
 
 (testit #t #f #t)
 (testit #f #f #t)
 (recursive #f)
+(testit1 #t #f #t)
+(testit1 #f #f #t)
+(tryit 1 2 3)
