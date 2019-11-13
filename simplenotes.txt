@@ -1,0 +1,6 @@
+(define function 
+    (lambda (x)
+        (let ((y 1))
+            (if #f x y))))
+
+(function 2)

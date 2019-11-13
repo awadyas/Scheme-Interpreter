@@ -7,5 +7,12 @@
     (let ((nconseq (not conseq)) (nalt (not alt)))
       (if cond nconseq nalt))))
 
+(define recursive
+    (lambda (bool1)
+        (if bool1 #t (recursive (not bool1))))) 
+
+
+
 (testit #t #f #t)
 (testit #f #f #t)
+(recursive #f)

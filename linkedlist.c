@@ -68,7 +68,7 @@ void display(Value *list){
 // list.
 Value *reverse(Value *list){
     assert(list != NULL);
-    assert(list->type == CONS_TYPE);
+    //assert(list->type == CONS_TYPE);
     Value *head = makeNull();
     Value *current = list;
     while(current->type != NULL_TYPE){
