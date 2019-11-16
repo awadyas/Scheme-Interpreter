@@ -32,6 +32,10 @@ void error(int status){
             printf("Error: undefined symbol\n");
             break;
         }
+        case 6: {
+            printf("Error: non-number value passed to primitive function +\n");
+            break;
+        }
     }
     texit(1);
 }
@@ -79,6 +83,9 @@ void printTreeValue(Value *value){
                 break;
             case VOID_TYPE:
                 //printf("voidboi");
+                break;
+            case PRIMITIVE_TYPE:
+                printf("Primitive function\n");
                 break;
             default:
                 break;
@@ -168,11 +175,10 @@ Value *evalDefine(Value *args, Frame *frame){
         printf("%i\n", length(args));
         error(3);
     }
-    if (!strcmp(car(car(cdr(args)))->s, "lambda") && length(args) == 2){
+    if (length(args) == 2){
         Value *boop = cons(car(args), eval(cdr(args), frame));
         frame->bindings = cons(boop, frame->bindings);
-    }
-    else{
+    } else {
         Value *boop = cons(car(args), evalLambda(cdr(args), frame));
         frame->bindings = cons(boop, frame->bindings);
     }
@@ -193,12 +199,19 @@ Value *evalLambda(Value *args, Frame *frame){
     return closure;
 }
 
+Value *applyPrimitive(Value *function, Value *args){
+    assert(function->type == PRIMITIVE_TYPE);
+    //printf("In applyPrimitive, about to return\n");
+    Value *ret = (function->pf)(args);
+    //printf("done\n");
+    return ret;
+}
+
 Value *apply(Value *function, Value *args){
     assert(function->type == CLOSURE_TYPE);
     if (function->cl.paramNames->type == CONS_TYPE){
         assert(length(args) == length(function->cl.paramNames));
-    }
-    else{
+    } else {
         assert(function->cl.paramNames->type == SYMBOL_TYPE);
     }
     Frame *frame = talloc(sizeof(Frame));
@@ -276,7 +289,14 @@ Value *eval(Value *expr, Frame *frame){
             } else {
                 Value *evaledOperator = eval(first, frame);
                 Value *evaledArgs = evalEach(args, frame);
-                return apply(evaledOperator, evaledArgs);
+                if (evaledOperator->type == CLOSURE_TYPE){
+                    return apply(evaledOperator, evaledArgs);
+                } else if (evaledOperator->type == PRIMITIVE_TYPE){
+                    //printf("Hi this is right before applyPrimitive (in eval)\n");
+                    return applyPrimitive(evaledOperator, evaledArgs);
+                } else {
+                    error(1);
+                }
             }
             return result;
             break;
@@ -297,10 +317,90 @@ Value *eval(Value *expr, Frame *frame){
     return expr;
 }
 
+Value *primitiveAdd(Value *args){
+    //printf("in primitiveAdd!\n" );
+    Value *ret = talloc(sizeof(Value));
+    ret->type = DOUBLE_TYPE;
+    if (args->type == NULL_TYPE){
+        ret->d = 0;
+        return ret;
+    }
+    double total = 0;
+    while (args->type != NULL_TYPE){
+        if (car(args)->type == INT_TYPE){
+            total += car(args)->i;
+        } else if (car(args)->type == DOUBLE_TYPE) {
+            total += car(args)->d;
+        } else {
+            error(6);
+        }
+        args = cdr(args);
+    }
+    ret->d = total;
+    return ret;
+}
+
+Value *primitiveNull(Value *args){
+    if (length(args) != 1){
+        error(3);
+    }
+    Value *ret = talloc(sizeof(Value));
+    ret->type = BOOL_TYPE;
+    printf("%i\n", car(args)->type);
+    if (car(args)->type == CONS_TYPE){
+        if (car(car(args))->type == NULL_TYPE){
+            ret->i = 1;
+        }
+    } else {
+        ret->i = 0;
+    }
+    return ret;
+}
+
+Value *primitiveCar(Value *args){
+    if (length(args) != 1){
+        error(3);
+    }
+    return car(car(car(args)));
+}
+
+Value *primitiveCdr(Value *args){
+    if (length(args) != 1){
+        error(3);
+    }
+    Value *ret = talloc(sizeof(Value));
+    ret->type = CONS_TYPE;
+    ret->c.car = cdr(car(car(args)));
+    ret->c.cdr = makeNull();
+    return ret;
+}
+
+void bind(char *name, Value *(*function)(struct Value *), Frame *frame) {
+    // Add primitive functions to top-level bindings list
+    Value *value = talloc(sizeof(Value));
+    value->type = PRIMITIVE_TYPE;
+    value->pf = function;
+    Value *nameVal = talloc(sizeof(Value));
+    nameVal->type = STR_TYPE;
+    nameVal->s = name;
+    Value *funVal = talloc(sizeof(Value));
+    funVal->type = PRIMITIVE_TYPE;
+    funVal->pf = function;
+    Value *cell = cons(nameVal, funVal);
+    frame->bindings = cons(cell, frame->bindings);
+    printBindings(frame->bindings);
+}
+
 void interpret(Value *tree){
     Frame *frame = talloc(sizeof(Frame));
     frame->parent = NULL;
     frame->bindings = makeNull();
+
+    bind("+", primitiveAdd, frame);
+    bind("null?", primitiveNull, frame);
+    bind("car", primitiveCar, frame);
+    bind("cdr", primitiveCdr, frame);
+
     Value *current = tree;
     while (current->type != NULL_TYPE){
         Value *answer = eval(current, frame);
