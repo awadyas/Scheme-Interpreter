@@ -38,15 +38,16 @@ void error(int status){
         }
         case 7: {
             printf("Error: equal? cannot compare this kind of value\n");
+            break;
         }
         case 8: {
             printf("Error: append's arguments must be lists\n");
+            break;
         }
     }
     texit(1);
 }
 
-//Helper function for printTree
 void printTreeValue(Value *value){
     switch (value->type){
             case INT_TYPE:
@@ -88,7 +89,6 @@ void printTreeValue(Value *value){
                 }
                 break;
             case VOID_TYPE:
-                //printf("voidboi");
                 break;
             case PRIMITIVE_TYPE:
                 printf("Primitive function\n");
@@ -413,39 +413,35 @@ Value *primitiveEqual(Value *args){
     if (first->type == INT_TYPE){
         if (second->type != INT_TYPE){
            answer->i = 0; 
-        }
-        else{
+        } else {
             if (first->i == second->i){
                 answer->i = 1; 
-            }
-            else{
+            } else {
                 answer->i = 0; 
             }
         }
-    } 
-    else if (first->type == STR_TYPE){
+    } else if (first->type == STR_TYPE){
         if (second->type != STR_TYPE){
            answer->i = 0; 
         }
         else{
             if (!strcmp(first->s,second->s)){
                 answer->i = 1; 
-            }
-            else{
+            } else {
                 answer->i = 0; 
             }
         }
-    } 
-    else if (first->type == SYMBOL_TYPE){
-        if (second->type != SYMBOL_TYPE){
+    } else if (first->type == DOUBLE_TYPE){
+        if (second->type != DOUBLE_TYPE){
            answer->i = 0; 
+        } else {
+            if (first->d == second->d){
+                answer->i = 1; 
+            } else {
+                answer->i = 0; 
+            }
         }
-        else{
-//            Should evaluate symbol before it is passed in?
-//            TODO!!!
-        }
-    }
-    else{
+    } else {
         error(7);
     }
     return answer;
@@ -468,8 +464,7 @@ Value *primitiveAppend(Value *args) {
     while (args->type == CONS_TYPE){
         if (car(args)->type != CONS_TYPE){
             error(8);
-        }
-        else{
+        } else {
             Value *inner = car(args);
             while (inner->type != NULL_TYPE){
                 ans = cons(car(inner), ans);
@@ -495,7 +490,6 @@ void bind(char *name, Value *(*function)(struct Value *), Frame *frame) {
     funVal->pf = function;
     Value *cell = cons(nameVal, funVal);
     frame->bindings = cons(cell, frame->bindings);
-    //printBindings(frame->bindings);
 }
 
 void interpret(Value *tree){
@@ -514,9 +508,6 @@ void interpret(Value *tree){
 
     Value *current = tree;
     while (current->type != NULL_TYPE){
-        //printf("Evaluating this: ");
-        //printTree2(current);
-        //printf("\n");
         Value *answer = eval(current, frame);
         current = cdr(current);
         if (answer->type != VOID_TYPE) {
