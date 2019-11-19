@@ -92,6 +92,29 @@ void printTreeValue(Value *value){
         }
 }
 
+void printTree2(Value *tree){
+    if (tree->type != CONS_TYPE){
+        printTreeValue(tree);
+    } else {
+        Value *current = tree;
+        while (current->type != NULL_TYPE){
+            if (car(current)->type == CONS_TYPE){
+                printf("(");
+                printTree2(car(current));
+                printf(") ");
+            } else {
+                printTreeValue(car(current));
+                if (cdr(current)->type == CONS_TYPE){
+                    printf(" ");
+                } else if (cdr(current)->type != NULL_TYPE){
+                    printf(" . ");
+                }
+            }
+            current = cdr(current);
+        }
+    }
+}
+
 void printBindings(Value *bindings){
     Value *cur = bindings;
     printf("Bindings\n");
@@ -172,7 +195,6 @@ Value *evalEach(Value *args, Frame *frame){
 
 Value *evalDefine(Value *args, Frame *frame){
     if (length(args) != 2 && length(args) != 3){
-        printf("%i\n", length(args));
         error(3);
     }
     if (length(args) == 2){
@@ -201,9 +223,7 @@ Value *evalLambda(Value *args, Frame *frame){
 
 Value *applyPrimitive(Value *function, Value *args){
     assert(function->type == PRIMITIVE_TYPE);
-    //printf("In applyPrimitive, about to return\n");
     Value *ret = (function->pf)(args);
-    //printf("done\n");
     return ret;
 }
 
@@ -272,7 +292,7 @@ Value *eval(Value *expr, Frame *frame){
                 if (length(args) != 1){
                     error(3);
                 }
-                result = args;
+                result = car(args);
             } else if(!strcmp(first->s, "define")){
                 result = evalDefine(args, frame);
                 if (result->type != VOID_TYPE){
@@ -282,6 +302,7 @@ Value *eval(Value *expr, Frame *frame){
                     } else {
                         printTreeValue(result);
                     }
+                    printf("\n");
                     texit(1);
                 }
             } else if (!strcmp(first->s, "lambda")){
@@ -292,7 +313,6 @@ Value *eval(Value *expr, Frame *frame){
                 if (evaledOperator->type == CLOSURE_TYPE){
                     return apply(evaledOperator, evaledArgs);
                 } else if (evaledOperator->type == PRIMITIVE_TYPE){
-                    //printf("Hi this is right before applyPrimitive (in eval)\n");
                     return applyPrimitive(evaledOperator, evaledArgs);
                 } else {
                     error(1);
@@ -318,7 +338,6 @@ Value *eval(Value *expr, Frame *frame){
 }
 
 Value *primitiveAdd(Value *args){
-    //printf("in primitiveAdd!\n" );
     Value *ret = talloc(sizeof(Value));
     ret->type = DOUBLE_TYPE;
     if (args->type == NULL_TYPE){
@@ -346,11 +365,8 @@ Value *primitiveNull(Value *args){
     }
     Value *ret = talloc(sizeof(Value));
     ret->type = BOOL_TYPE;
-    printf("%i\n", car(args)->type);
-    if (car(args)->type == CONS_TYPE){
-        if (car(car(args))->type == NULL_TYPE){
-            ret->i = 1;
-        }
+    if (car(args)->type == NULL_TYPE){
+        ret->i = 1;
     } else {
         ret->i = 0;
     }
@@ -361,18 +377,21 @@ Value *primitiveCar(Value *args){
     if (length(args) != 1){
         error(3);
     }
-    return car(car(car(args)));
+    return car(car(args));
 }
 
 Value *primitiveCdr(Value *args){
     if (length(args) != 1){
         error(3);
     }
-    Value *ret = talloc(sizeof(Value));
-    ret->type = CONS_TYPE;
-    ret->c.car = cdr(car(car(args)));
-    ret->c.cdr = makeNull();
-    return ret;
+    return cdr(car(args));
+}
+
+Value *primitiveCons(Value *args){
+    if (length(args) != 2){
+        error(3);
+    }
+    return cons(car(args), car(cdr(args)));
 }
 
 void bind(char *name, Value *(*function)(struct Value *), Frame *frame) {
@@ -388,7 +407,7 @@ void bind(char *name, Value *(*function)(struct Value *), Frame *frame) {
     funVal->pf = function;
     Value *cell = cons(nameVal, funVal);
     frame->bindings = cons(cell, frame->bindings);
-    printBindings(frame->bindings);
+    //printBindings(frame->bindings);
 }
 
 void interpret(Value *tree){
@@ -400,16 +419,22 @@ void interpret(Value *tree){
     bind("null?", primitiveNull, frame);
     bind("car", primitiveCar, frame);
     bind("cdr", primitiveCdr, frame);
+    bind("cons", primitiveCons, frame);
 
     Value *current = tree;
     while (current->type != NULL_TYPE){
+        //printf("Evaluating this: ");
+        //printTree2(current);
+        //printf("\n");
         Value *answer = eval(current, frame);
         current = cdr(current);
         if (answer->type != VOID_TYPE) {
             if (answer->type == CONS_TYPE){
-                printTree(answer);
+                printf("(");
+                printTree2(answer);
+                printf(")");
             } else {
-                printTreeValue(answer);
+                printTree2(answer);
             }
             printf("\n");
         }
