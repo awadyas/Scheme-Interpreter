@@ -36,6 +36,12 @@ void error(int status){
             printf("Error: non-number value passed to primitive function +\n");
             break;
         }
+        case 7: {
+            printf("Error: equal? cannot compare this kind of value\n");
+        }
+        case 8: {
+            printf("Error: append's arguments must be lists\n");
+        }
     }
     texit(1);
 }
@@ -108,6 +114,8 @@ void printTree2(Value *tree){
                     printf(" ");
                 } else if (cdr(current)->type != NULL_TYPE){
                     printf(" . ");
+                    printTreeValue(cdr(current));
+                    break;
                 }
             }
             current = cdr(current);
@@ -394,6 +402,86 @@ Value *primitiveCons(Value *args){
     return cons(car(args), car(cdr(args)));
 }
 
+Value *primitiveEqual(Value *args){
+    if (length(args) != 2){
+        error(3);
+    }
+    Value *first = car(args);
+    Value *second = car(cdr(args));
+    Value *answer = talloc(sizeof(Value));
+    answer->type = BOOL_TYPE;
+    if (first->type == INT_TYPE){
+        if (second->type != INT_TYPE){
+           answer->i = 0; 
+        }
+        else{
+            if (first->i == second->i){
+                answer->i = 1; 
+            }
+            else{
+                answer->i = 0; 
+            }
+        }
+    } 
+    else if (first->type == STR_TYPE){
+        if (second->type != STR_TYPE){
+           answer->i = 0; 
+        }
+        else{
+            if (!strcmp(first->s,second->s)){
+                answer->i = 1; 
+            }
+            else{
+                answer->i = 0; 
+            }
+        }
+    } 
+    else if (first->type == SYMBOL_TYPE){
+        if (second->type != SYMBOL_TYPE){
+           answer->i = 0; 
+        }
+        else{
+//            Should evaluate symbol before it is passed in?
+//            TODO!!!
+        }
+    }
+    else{
+        error(7);
+    }
+    return answer;
+}
+
+Value *primitiveList(Value *args){
+    assert(args->type == CONS_TYPE);
+    Value *ans = makeNull();
+    while (args->type == CONS_TYPE){
+        ans = cons(car(args), ans);
+        args = cdr(args);
+    }
+    ans = reverse(ans);
+    return ans;
+}
+
+Value *primitiveAppend(Value *args) {
+    assert(args->type == CONS_TYPE);
+    Value *ans = makeNull();
+    while (args->type == CONS_TYPE){
+        if (car(args)->type != CONS_TYPE){
+            error(8);
+        }
+        else{
+            Value *inner = car(args);
+            while (inner->type != NULL_TYPE){
+                ans = cons(car(inner), ans);
+                inner = cdr(inner);
+            }
+        }
+        args = cdr(args);
+    }
+    ans = reverse(ans);
+    return ans;
+}
+
 void bind(char *name, Value *(*function)(struct Value *), Frame *frame) {
     // Add primitive functions to top-level bindings list
     Value *value = talloc(sizeof(Value));
@@ -420,6 +508,9 @@ void interpret(Value *tree){
     bind("car", primitiveCar, frame);
     bind("cdr", primitiveCdr, frame);
     bind("cons", primitiveCons, frame);
+    bind("equal?", primitiveEqual, frame);
+    bind("list", primitiveList, frame);
+    bind("append", primitiveAppend, frame);
 
     Value *current = tree;
     while (current->type != NULL_TYPE){
