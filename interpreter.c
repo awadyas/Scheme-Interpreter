@@ -156,7 +156,7 @@ Value *evalLet(Value *args, Frame *frame){
     if (length(args) != 2){
         error(3);
     }
-    Value *inner = car(car(args));
+    //Value *inner = car(car(args));
 
     Frame *newFrame = talloc(sizeof(Frame));
     newFrame->parent = frame;
@@ -167,6 +167,58 @@ Value *evalLet(Value *args, Frame *frame){
         assert(car(car(currentVal))->type == SYMBOL_TYPE);
         Value *value = car(currentVal);
         Value *evalu = eval(cdr(value), frame);
+        Value *cell = cons(car(value), evalu);
+        newFrame->bindings = cons(cell, newFrame->bindings);
+        currentVal = cdr(currentVal);
+    }
+    return eval(cdr(args), newFrame);
+}
+
+Value *evalLetStar(Value *args, Frame *frame){
+    if (length(args) != 2){
+        error(3);
+    }
+    Frame *oldFrame = frame;
+    Frame *newFrame;
+    Value *current = car(args);
+    while (current->type != NULL_TYPE){
+        newFrame = talloc(sizeof(Frame));
+        newFrame->parent = oldFrame;
+        newFrame->bindings = makeNull();
+
+        assert(car(car(current))->type == SYMBOL_TYPE);
+        Value *value = car(current);
+        Value *evalu = eval(cdr(value), newFrame);
+        Value *cell = cons(car(value), evalu);
+        newFrame->bindings = cons(cell, newFrame->bindings);
+        current = cdr(current);
+        oldFrame = newFrame;
+    }
+    return eval(cdr(args), newFrame);
+}
+
+Value *evalLetRec(Value *args, Frame *frame){
+    if (length(args) != 2){
+        error(3);
+    }
+    Frame *newFrame = talloc(sizeof(Frame));
+    newFrame->parent = frame;
+    newFrame->bindings = makeNull();
+    Value *currentVal = car(args);
+    while (currentVal->type != NULL_TYPE){
+        Value *voidVal = talloc(sizeof(Value));
+        voidVal->type = VOID_TYPE;
+        assert(car(car(currentVal))->type == SYMBOL_TYPE);
+        Value *value = car(currentVal);
+        Value *cell = cons(car(value), voidVal);
+        newFrame->bindings = cons(cell, newFrame->bindings);
+        currentVal = cdr(currentVal);
+    }
+    //newFrame->bindings = makeNull();
+    currentVal = car(args);
+    while (currentVal->type != NULL_TYPE){
+        Value *value = car(currentVal);
+        Value *evalu = eval(cdr(value), newFrame);
         Value *cell = cons(car(value), evalu);
         newFrame->bindings = cons(cell, newFrame->bindings);
         currentVal = cdr(currentVal);
@@ -215,6 +267,40 @@ Value *evalDefine(Value *args, Frame *frame){
     Value *voidboi = talloc(sizeof(Value));
     voidboi->type = VOID_TYPE;
     return voidboi;
+}
+
+Value *evalSet(Value *args, Frame *frame){
+    if (length(args) != 2){
+        error(3);
+    }
+    Value *variable = car(args);
+    Value *newVal = eval(car(cdr(args)) ,frame);
+    Value *voidboi = talloc(sizeof(Value));
+    voidboi->type = VOID_TYPE;
+    Frame *currentFrame = frame;
+    while (currentFrame != NULL){
+        Value *currentBinding = currentFrame->bindings;
+        while (currentBinding->type != NULL_TYPE){
+            if (!strcmp(car(car(currentBinding))->s, variable->s)){
+                car(currentBinding)->c.cdr = newVal;
+                return voidboi;
+            }
+            currentBinding = cdr(currentBinding);
+        }
+        currentFrame = currentFrame->parent;
+    }
+    error(5);
+    return voidboi;
+}
+
+Value *evalBegin(Value *args, Frame *frame){
+    Value *currentVal = args;
+    Value *answer;
+    while (currentVal->type != NULL_TYPE){
+        answer = eval(currentVal, frame);
+        currentVal = cdr(currentVal);
+    }
+    return answer;
 }
 
 Value *evalLambda(Value *args, Frame *frame){
@@ -315,6 +401,14 @@ Value *eval(Value *expr, Frame *frame){
                 }
             } else if (!strcmp(first->s, "lambda")){
                 result = evalLambda(args, frame);
+            } else if (!strcmp(first->s, "let*")){
+                result = evalLetStar(args, frame);
+            } else if (!strcmp(first->s, "letrec")){
+                result = evalLetRec(args, frame);
+            } else if (!strcmp(first->s, "set!")){
+                result = evalSet(args, frame);
+            } else if (!strcmp(first->s, "begin")){
+                result = evalBegin(args, frame);
             } else {
                 Value *evaledOperator = eval(first, frame);
                 Value *evaledArgs = evalEach(args, frame);
@@ -323,6 +417,9 @@ Value *eval(Value *expr, Frame *frame){
                 } else if (evaledOperator->type == PRIMITIVE_TYPE){
                     return applyPrimitive(evaledOperator, evaledArgs);
                 } else {
+                    printf("I break here :(\n");
+                    printf("Expr type: %i\n", evaledOperator->type);
+                    printf("Expr val: %f\n", evaledOperator->d);
                     error(1);
                 }
             }
@@ -338,6 +435,8 @@ Value *eval(Value *expr, Frame *frame){
             break;
         }
         default: {
+            printf("Hopefully this is where I am breaking\n");
+            printf("Expr type: %i\n", expr->type);
             error(1);
             break;
         }
@@ -412,33 +511,33 @@ Value *primitiveEqual(Value *args){
     answer->type = BOOL_TYPE;
     if (first->type == INT_TYPE){
         if (second->type != INT_TYPE){
-           answer->i = 0; 
+           answer->i = 0;
         } else {
             if (first->i == second->i){
-                answer->i = 1; 
+                answer->i = 1;
             } else {
-                answer->i = 0; 
+                answer->i = 0;
             }
         }
     } else if (first->type == STR_TYPE){
         if (second->type != STR_TYPE){
-           answer->i = 0; 
+           answer->i = 0;
         }
         else{
             if (!strcmp(first->s,second->s)){
-                answer->i = 1; 
+                answer->i = 1;
             } else {
-                answer->i = 0; 
+                answer->i = 0;
             }
         }
     } else if (first->type == DOUBLE_TYPE){
         if (second->type != DOUBLE_TYPE){
-           answer->i = 0; 
+           answer->i = 0;
         } else {
             if (first->d == second->d){
-                answer->i = 1; 
+                answer->i = 1;
             } else {
-                answer->i = 0; 
+                answer->i = 0;
             }
         }
     } else {

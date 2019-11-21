@@ -1,7 +1,26 @@
-(equal? 6 6)
-(equal? 6 7)
+(let*
+    (
+    (x 5)
+    (y 6)
+    (z 7)
+    (a z))
 
-(equal? "please" "please")
-(equal? "please" "help")
+    (list x y z a))
 
-(equal? 7 8 9)
+(letrec ((append1
+  (lambda (L1 L2)
+    (if (null? L1)
+        L2
+        (cons (car L1) (append1 (cdr L1) L2))))))
+
+        (append1 (quote (1)) (quote (2))))
+
+
+
+(define x 3)
+(begin
+  (set! x (+ x 1))
+  (+ x x))
+
+(begin (define x 3) (define y 4)
+(+ x y))
