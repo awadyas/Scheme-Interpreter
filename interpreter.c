@@ -268,8 +268,6 @@ Value *lookUpSymbol(Value *expr, Frame *frame){
         }
         currentFrame = currentFrame->parent;
     }
-    //printf("This is symbol: ");
-    //printTree2(expr);
     error(5);
     return expr;
 }
@@ -398,8 +396,6 @@ Value *apply(Value *function, Value *args){
     assert(function->type == CLOSURE_TYPE);
     if (function->cl.paramNames->type == CONS_TYPE){
         assert(length(args) == length(function->cl.paramNames));
-    } else {
-        assert(function->cl.paramNames->type == SYMBOL_TYPE);
     }
     Frame *frame = talloc(sizeof(Frame));
     frame->parent = function->cl.frame;
@@ -450,7 +446,8 @@ Value *eval(Value *expr, Frame *frame){
             Value *first = car(temp);
             Value *args = cdr(temp);
             Value *result;
-            assert(first->type == SYMBOL_TYPE);
+            // Can be a symbol or can be a funciton itself
+            //assert(first->type == SYMBOL_TYPE);
             if (!strcmp(first->s, "if")){
                 result = evalIf(args, frame);
             } else if (!strcmp(first->s, "let")){
