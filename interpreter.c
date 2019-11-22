@@ -33,7 +33,7 @@ void error(int status){
             break;
         }
         case 6: {
-            printf("Error: non-number value passed to primitive function +\n");
+            printf("Error: non-number value passed to arithmetic function\n");
             break;
         }
         case 7: {
@@ -42,6 +42,14 @@ void error(int status){
         }
         case 8: {
             printf("Error: append's arguments must be lists\n");
+            break;
+        }
+        case 9: {
+            printf("Error: parameter must be a boolean\n");
+            break;
+        }
+        case 10: {
+            printf("Error: bad syntax - 'else' clause must be last\n");
             break;
         }
     }
@@ -82,11 +90,7 @@ void printTreeValue(Value *value){
                 }
                 break;
             case CLOSURE_TYPE:
-                if (value->cl.functionCode->type == CONS_TYPE){
-                    printTree(value->cl.functionCode);
-                } else {
-                    printTreeValue(value->cl.functionCode);
-                }
+                printf("#<procedure>");
                 break;
             case VOID_TYPE:
                 break;
@@ -107,7 +111,7 @@ void printTree2(Value *tree){
             if (car(current)->type == CONS_TYPE){
                 printf("(");
                 printTree2(car(current));
-                printf(") ");
+                printf(")");
             } else {
                 printTreeValue(car(current));
                 if (cdr(current)->type == CONS_TYPE){
@@ -152,12 +156,38 @@ Value *evalIf(Value *args, Frame *frame){
     }
 }
 
+Value *evalCond(Value *args, Frame *frame){
+    if (length(args) == 0){
+        error(3);
+    }
+    Value *current = args;
+    Value *boolean;
+    while (current->type != NULL_TYPE){
+        if (car(car(current))->type == SYMBOL_TYPE && !strcmp(car(car(current))->s, "else")){
+            if (cdr(current)->type != NULL_TYPE){
+                error(10);
+            }
+            return eval(cdr(car(current)), frame);
+        } else {
+
+            boolean = eval(car(car(current)), frame);
+            if (boolean->type != BOOL_TYPE){
+                error(9);
+            } else if (boolean->i){
+                return eval(cdr(car(current)), frame);
+            }
+        }
+        current = cdr(current);
+    }
+    Value *voidVal = talloc(sizeof(Value));
+    voidVal->type = VOID_TYPE;
+    return voidVal;
+}
+
 Value *evalLet(Value *args, Frame *frame){
     if (length(args) != 2){
         error(3);
     }
-    //Value *inner = car(car(args));
-
     Frame *newFrame = talloc(sizeof(Frame));
     newFrame->parent = frame;
     newFrame->bindings = makeNull();
@@ -294,6 +324,9 @@ Value *evalSet(Value *args, Frame *frame){
 }
 
 Value *evalBegin(Value *args, Frame *frame){
+    if (length(args) < 1){
+        error(3);
+    }
     Value *currentVal = args;
     Value *answer;
     while (currentVal->type != NULL_TYPE){
@@ -313,6 +346,44 @@ Value *evalLambda(Value *args, Frame *frame){
     closure->cl.paramNames = car(args);
     closure->cl.functionCode = cdr(args);
     return closure;
+}
+
+Value *evalAnd(Value *args, Frame *frame){
+    if (length(args) != 2){
+        error(3);
+    }
+    Value *first = eval(car(args), frame);
+    Value *second = eval(car(cdr(args)), frame);
+    if (first->type != BOOL_TYPE || second->type != BOOL_TYPE){
+        error(9);
+    }
+    Value *ret = talloc(sizeof(Value));
+    ret->type = BOOL_TYPE;
+    if (first->i && second->i){
+        ret->i = 1;
+    } else {
+        ret->i = 0;
+    }
+    return ret;
+}
+
+Value *evalOr(Value *args, Frame *frame){
+    if (length(args) != 2){
+        error(3);
+    }
+    Value *first = eval(car(args), frame);
+    Value *second = eval(car(cdr(args)), frame);
+    if (first->type != BOOL_TYPE || second->type != BOOL_TYPE){
+        error(9);
+    }
+    Value *ret = talloc(sizeof(Value));
+    ret->type = BOOL_TYPE;
+    if (first->i || second->i){
+        ret->i = 1;
+    } else {
+        ret->i = 0;
+    }
+    return ret;
 }
 
 Value *applyPrimitive(Value *function, Value *args){
@@ -409,6 +480,12 @@ Value *eval(Value *expr, Frame *frame){
                 result = evalSet(args, frame);
             } else if (!strcmp(first->s, "begin")){
                 result = evalBegin(args, frame);
+            } else if (!strcmp(first->s, "cond")){
+                result = evalCond(args, frame);
+            } else if (!strcmp(first->s, "and")){
+                result = evalAnd(args, frame);
+            } else if (!strcmp(first->s, "or")){
+                result = evalOr(args, frame);
             } else {
                 Value *evaledOperator = eval(first, frame);
                 Value *evaledArgs = evalEach(args, frame);
@@ -417,9 +494,6 @@ Value *eval(Value *expr, Frame *frame){
                 } else if (evaledOperator->type == PRIMITIVE_TYPE){
                     return applyPrimitive(evaledOperator, evaledArgs);
                 } else {
-                    printf("I break here :(\n");
-                    printf("Expr type: %i\n", evaledOperator->type);
-                    printf("Expr val: %f\n", evaledOperator->d);
                     error(1);
                 }
             }
@@ -435,8 +509,6 @@ Value *eval(Value *expr, Frame *frame){
             break;
         }
         default: {
-            printf("Hopefully this is where I am breaking\n");
-            printf("Expr type: %i\n", expr->type);
             error(1);
             break;
         }
@@ -455,7 +527,7 @@ Value *primitiveAdd(Value *args){
     while (args->type != NULL_TYPE){
         if (car(args)->type == INT_TYPE){
             total += car(args)->i;
-        } else if (car(args)->type == DOUBLE_TYPE) {
+        } else if (car(args)->type == DOUBLE_TYPE){
             total += car(args)->d;
         } else {
             error(6);
@@ -463,6 +535,143 @@ Value *primitiveAdd(Value *args){
         args = cdr(args);
     }
     ret->d = total;
+    return ret;
+}
+
+Value *primitiveMultiply(Value *args){
+    if (length(args) < 2){
+        error(3);
+    }
+    Value *ret = talloc(sizeof(Value));
+    ret->type = DOUBLE_TYPE;
+    double total = 1;
+    while (args->type != NULL_TYPE){
+        if (car(args)->type == INT_TYPE){
+            total *= car(args)->i;
+        } else if (car(args)->type == DOUBLE_TYPE){
+            total *= car(args)->d;
+        } else {
+            error(6);
+        }
+        args = cdr(args);
+    }
+    ret->d = total;
+    return ret;
+}
+
+Value *primitiveSubtract(Value *args){
+    if (length(args) != 2){
+        error(3);
+    }
+    Value *ret = talloc(sizeof(Value));
+    ret->type = DOUBLE_TYPE;
+    double total;
+    Value *first = car(args);
+    if (first->type == INT_TYPE){
+        total = first->i;
+    } else if (first->type == DOUBLE_TYPE){
+        total = first->d;
+    } else {
+        error(6);
+    }
+    Value *second = car(cdr(args));
+    if (second->type == INT_TYPE){
+        total -= second->i;
+    } else if (second->type == DOUBLE_TYPE){
+        total -= second->d;
+    } else {
+        error(6);
+    }
+    ret->d = total;
+    return ret;
+}
+
+Value *primitiveDivide(Value *args){
+    if (length(args) != 2){
+        error(3);
+    }
+    Value *first = car(args);
+    Value *second = car(cdr(args));
+    Value *ret = talloc(sizeof(Value));
+    if (first->type == INT_TYPE && second->type == INT_TYPE){
+        int total = (first->i / second->i);
+        if (total % 1 == 0){
+            ret->type = INT_TYPE;
+            ret->i = (int) total;
+        } else {
+            ret->type = DOUBLE_TYPE;
+            ret->d = total;
+
+        }
+    }
+    return ret;
+}
+
+Value *primitiveLessThan(Value *args){
+    if (length(args) != 2){
+        error(3);
+    }
+    Value *ret = talloc(sizeof(Value));
+    ret->type = BOOL_TYPE;
+    Value *first = car(args);
+    Value *second = car(cdr(args));
+    double comp;
+    if (first->type == INT_TYPE){
+        comp = first->i;
+    } else if (first->type == DOUBLE_TYPE){
+        comp = first->d;
+    } else {
+        error(6);
+    }
+    if (second->type == INT_TYPE){
+        if (comp < second->i){
+            ret->i = 1;
+        } else {
+            ret->i = 0;
+        }
+    } else if (first->type == DOUBLE_TYPE){
+        if (comp < second->d){
+            ret->i = 1;
+        } else {
+            ret->i = 0;
+        }
+    } else {
+        error(6);
+    }
+    return ret;
+}
+
+Value *primitiveGreaterThan(Value *args){
+    if (length(args) != 2){
+        error(3);
+    }
+    Value *ret = talloc(sizeof(Value));
+    ret->type = BOOL_TYPE;
+    Value *first = car(args);
+    Value *second = car(cdr(args));
+    double comp;
+    if (first->type == INT_TYPE){
+        comp = first->i;
+    } else if (first->type == DOUBLE_TYPE){
+        comp = first->d;
+    } else {
+        error(6);
+    }
+    if (second->type == INT_TYPE){
+        if (comp > second->i){
+            ret->i = 1;
+        } else {
+            ret->i = 0;
+        }
+    } else if (first->type == DOUBLE_TYPE){
+        if (comp > second->d){
+            ret->i = 1;
+        } else {
+            ret->i = 0;
+        }
+    } else {
+        error(6);
+    }
     return ret;
 }
 
@@ -597,6 +806,11 @@ void interpret(Value *tree){
     frame->bindings = makeNull();
 
     bind("+", primitiveAdd, frame);
+    bind("*", primitiveMultiply, frame);
+    bind("-", primitiveSubtract, frame);
+    bind("<", primitiveLessThan, frame);
+    bind(">", primitiveGreaterThan, frame);
+    bind("/", primitiveDivide, frame);
     bind("null?", primitiveNull, frame);
     bind("car", primitiveCar, frame);
     bind("cdr", primitiveCdr, frame);

@@ -110,7 +110,6 @@ bool isNull(Value *value){
 // operation.
 int length(Value *value){
     assert(value != NULL);
-    assert(value->type == CONS_TYPE);
     int count = 0;
     Value *current = value;
     while(!isNull(current)){
