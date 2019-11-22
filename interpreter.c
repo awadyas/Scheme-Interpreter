@@ -3,12 +3,15 @@
 #include "talloc.h"
 #include "parser.h"
 #include "linkedlist.h"
+#include "tokenizer.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 Value *evalLambda(Value *args, Frame *frame);
+void printTree2(Value *tree);
+Value *apply(Value *function, Value * args);
 
 void error(int status){
     switch (status){
@@ -52,6 +55,22 @@ void error(int status){
             printf("Error: bad syntax - 'else' clause must be last\n");
             break;
         }
+        case 11: {
+            printf("Error: filename must be a string\n");
+            break;
+        }
+        case 12: {
+            printf("Error: file does not exist\n");
+            break;
+        }
+        case 13: {
+            printf("Error: cannot define variable twice\n");
+            break;
+        }
+        case 14: {
+            printf("Error: Parameters must be symbols\n");
+            break;
+        }
     }
     texit(1);
 }
@@ -90,6 +109,8 @@ void printTreeValue(Value *value){
                 }
                 break;
             case CLOSURE_TYPE:
+                printTree2(value->cl.functionCode);
+                printf("\n");
                 printf("#<procedure>");
                 break;
             case VOID_TYPE:
@@ -193,8 +214,14 @@ Value *evalLet(Value *args, Frame *frame){
     newFrame->bindings = makeNull();
     Value *currentVal = car(args);
     while (currentVal->type != NULL_TYPE){
-
         assert(car(car(currentVal))->type == SYMBOL_TYPE);
+        Value *currentBinding = newFrame->bindings;
+        while (currentBinding->type != NULL_TYPE){
+            if (!strcmp(car(car(currentBinding))->s, car(car(currentVal))->s)){
+                error(13);
+            }
+            currentBinding = cdr(currentBinding);
+        }
         Value *value = car(currentVal);
         Value *evalu = eval(cdr(value), frame);
         Value *cell = cons(car(value), evalu);
@@ -244,13 +271,18 @@ Value *evalLetRec(Value *args, Frame *frame){
         newFrame->bindings = cons(cell, newFrame->bindings);
         currentVal = cdr(currentVal);
     }
-    //newFrame->bindings = makeNull();
     currentVal = car(args);
     while (currentVal->type != NULL_TYPE){
         Value *value = car(currentVal);
         Value *evalu = eval(cdr(value), newFrame);
-        Value *cell = cons(car(value), evalu);
-        newFrame->bindings = cons(cell, newFrame->bindings);
+        Value *currentBinding = newFrame->bindings;
+        while (currentBinding->type != NULL_TYPE){
+            if (!strcmp(car(currentBinding)->s, value->s)){
+                car(currentBinding)->c.cdr = evalu;
+                break;
+            }
+            currentBinding = cdr(currentBinding);
+        }
         currentVal = cdr(currentVal);
     }
     return eval(cdr(args), newFrame);
@@ -273,13 +305,27 @@ Value *lookUpSymbol(Value *expr, Frame *frame){
 }
 
 Value *evalEach(Value *args, Frame *frame){
+    printf("My args have not been evaled");
+    printTree2(args);
+    printf("\n");
     Value *current = args;
     Value *evaledArgs = makeNull();
     while (current->type != NULL_TYPE){
-        evaledArgs = cons(eval(car(current), frame), evaledArgs);
+        printf("This is what I'm gonna eval\n");
+        printTree2(current);
+        Value *firstEval = eval(car(current), frame);
+        // if (firstEval->type == CLOSURE_TYPE){
+        //     printf("I'm trying to eval a closure type\n");
+        //     printTree2(firstEval);
+        //     firstEval = apply(firstEval, cdr(args));
+        // }
+        evaledArgs = cons(firstEval, evaledArgs);
         current = cdr(current);
     }
     evaledArgs = reverse(evaledArgs);
+    printf("My args have been evaled");
+    printTree2(evaledArgs);
+    printf("\n");
     return evaledArgs;
 }
 
@@ -337,8 +383,18 @@ Value *evalBegin(Value *args, Frame *frame){
 }
 
 Value *evalLambda(Value *args, Frame *frame){
+    //printf("\nHello I made it to evalLambda- args:");
+    //printTree2(args);
+    //printf("\n");
     if (length(args) != 2){
         error(3);
+    }
+    Value *currentParamName = car(args);
+    while (currentParamName->type != NULL_TYPE){
+        if (car(currentParamName)->type != SYMBOL_TYPE){
+            error(14);
+        }
+        currentParamName = cdr(currentParamName);
     }
     Value *closure = talloc(sizeof(Value));
     closure->type = CLOSURE_TYPE;
@@ -394,6 +450,7 @@ Value *applyPrimitive(Value *function, Value *args){
 
 Value *apply(Value *function, Value *args){
     assert(function->type == CLOSURE_TYPE);
+    printf("I'm applying here\n");
     if (function->cl.paramNames->type == CONS_TYPE){
         assert(length(args) == length(function->cl.paramNames));
     }
@@ -417,6 +474,23 @@ Value *apply(Value *function, Value *args){
     Value *result = eval(function->cl.functionCode, frame);
 
     return result;
+}
+
+void loadFile(Value *args){
+    if (args->type != STR_TYPE){
+        error(11);
+    }
+    FILE *file = fopen(args->s, "r");
+    if (file == NULL){
+        error(12);
+    }
+    fclose(file);
+    char *script = talloc(strlen("./interpreter < ") + strlen(args->s) + 1);
+    strcpy(script, "./interpreter < ");
+    strcat(script, args->s);
+    if (system(script)){
+        error(1);
+    }
 }
 
 Value *eval(Value *expr, Frame *frame){
@@ -446,8 +520,6 @@ Value *eval(Value *expr, Frame *frame){
             Value *first = car(temp);
             Value *args = cdr(temp);
             Value *result;
-            // Can be a symbol or can be a funciton itself
-            //assert(first->type == SYMBOL_TYPE);
             if (!strcmp(first->s, "if")){
                 result = evalIf(args, frame);
             } else if (!strcmp(first->s, "let")){
@@ -485,12 +557,24 @@ Value *eval(Value *expr, Frame *frame){
                 result = evalAnd(args, frame);
             } else if (!strcmp(first->s, "or")){
                 result = evalOr(args, frame);
+            } else if (!strcmp(first->s, "load")){
+                Value *voidVal = talloc(sizeof(Value));
+                voidVal->type = VOID_TYPE;
+                result = voidVal;
+                if (length(args) != 1){
+                    error(3);
+                }
+                loadFile(car(args));
             } else {
                 Value *evaledOperator = eval(first, frame);
                 Value *evaledArgs = evalEach(args, frame);
                 if (evaledOperator->type == CLOSURE_TYPE){
+                    printf("I tried to call eval\n");
                     return apply(evaledOperator, evaledArgs);
                 } else if (evaledOperator->type == PRIMITIVE_TYPE){
+                    //printf("EvaledArgs: ");
+                    //printTree2(evaledArgs);
+                    //printf("\n");
                     return applyPrimitive(evaledOperator, evaledArgs);
                 } else {
                     error(1);
@@ -529,6 +613,9 @@ Value *primitiveAdd(Value *args){
         } else if (car(args)->type == DOUBLE_TYPE){
             total += car(args)->d;
         } else {
+            printf("This is causing the error: ");
+            printTree2(car(args));
+            printf("\n");
             error(6);
         }
         args = cdr(args);

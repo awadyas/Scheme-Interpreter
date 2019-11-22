@@ -1,5 +1,16 @@
-(quote a)
-(quote (a b c))
-(quote (a b (quote (c d e))))
-(let ((x (quote a)) (y (quote (a b c))))
-    y)
+(define fun
+    (lambda ()
+        7))
+(fun)
+
+(cons (lambda () 1) (lambda () 2))
+(cons ((lambda () 1)) ((lambda () 2)))
+
+(define fun2
+    (lambda (x y)
+        (+ (x) (y))))
+
+;;(fun2 (lambda () 1) (lambda () 2))
+
+((lambda (x y ) (+ x y)) 3 4)
+((lambda () (+ 3 4)))
