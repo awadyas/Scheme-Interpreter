@@ -1,7 +1,12 @@
-(equal? 6 6)
-(equal? 6 7)
+(define A
+  (lambda (k x1 x2 x3 x4 x5)
+    (letrec ((B
+              (lambda ()
+                (begin
+                  (set! k (- k 1))
+                  (A k B x1 x2 x3 x4)))))
+      (if (or (< k 0) (= k 0))
+          (+ (x4) (x5))
+          (B)))))
 
-(equal? "please" "please")
-(equal? "please" "help")
-
-(equal? 7 8 9)
+(A 10 (lambda () 1) (lambda () -1) (lambda () -1) (lambda () 1) (lambda () 0))

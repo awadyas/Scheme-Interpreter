@@ -268,6 +268,8 @@ Value *lookUpSymbol(Value *expr, Frame *frame){
         }
         currentFrame = currentFrame->parent;
     }
+    //printf("This is symbol: ");
+    //printTree2(expr);
     error(5);
     return expr;
 }
@@ -694,6 +696,56 @@ Value *primitiveGreaterThan(Value *args){
     return ret;
 }
 
+// Function for the literal '=' NOT 'equals?' - checks only numbers
+Value *primitiveEquals(Value *args){
+    if (length(args) != 2){
+        error(3);
+    }
+    Value *first = car(args);
+    Value *second = car(cdr(args));
+    Value *ret = talloc(sizeof(Value));
+    ret->type = BOOL_TYPE;
+    double comp;
+    if (first->type == INT_TYPE){
+        comp = (double) first->i;
+    } else if (first->type == DOUBLE_TYPE){
+        comp = first->d;
+    } else {
+        error(6);
+    }
+    if (second->type == INT_TYPE){
+        if (comp == (double) second->i){
+            ret->i = 1;
+        } else {
+            ret->i = 0;
+        }
+    } else if (second->type == DOUBLE_TYPE){
+        if (comp == second->d){
+            ret->i = 1;
+        } else {
+            ret->i = 0;
+        }
+    } else {
+        error(6);
+    }
+    return ret;
+}
+
+Value *primitiveModulo(Value *args){
+    if (length(args) != 2){
+        error(3);
+    }
+    Value *first = car(args);
+    Value *second = car(cdr(args));
+    if (first->type != INT_TYPE || second->type != INT_TYPE){
+        error(6);
+    }
+    Value *ret = talloc(sizeof(Value));
+    ret->type = INT_TYPE;
+    ret->i = (first->i % second->i);
+    return ret;
+}
+
 Value *primitiveNull(Value *args){
     if (length(args) != 1){
         error(3);
@@ -826,10 +878,12 @@ void interpret(Value *tree){
 
     bind("+", primitiveAdd, frame);
     bind("*", primitiveMultiply, frame);
+    bind("/", primitiveDivide, frame);
     bind("-", primitiveSubtract, frame);
     bind("<", primitiveLessThan, frame);
     bind(">", primitiveGreaterThan, frame);
-    bind("/", primitiveDivide, frame);
+    bind("=", primitiveEquals, frame);
+    bind("modulo", primitiveModulo, frame);
     bind("null?", primitiveNull, frame);
     bind("car", primitiveCar, frame);
     bind("cdr", primitiveCdr, frame);
