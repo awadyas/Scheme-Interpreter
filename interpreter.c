@@ -593,16 +593,35 @@ Value *primitiveDivide(Value *args){
     Value *first = car(args);
     Value *second = car(cdr(args));
     Value *ret = talloc(sizeof(Value));
+    int itotal;
+    double dtotal;
     if (first->type == INT_TYPE && second->type == INT_TYPE){
-        int total = (first->i / second->i);
-        if (total % 1 == 0){
+        itotal = (first->i / second->i);
+        dtotal = ((double) first->i / (double) second->i);
+        if (itotal == dtotal){
             ret->type = INT_TYPE;
-            ret->i = (int) total;
+            ret->i = itotal;
         } else {
             ret->type = DOUBLE_TYPE;
-            ret->d = total;
-
+            ret->d = dtotal;
         }
+    } else if (first->type == INT_TYPE){
+        dtotal = (first->i / second->d);
+        ret->type = DOUBLE_TYPE;
+        ret->d = dtotal;
+    } else if (first->type == DOUBLE_TYPE){
+        dtotal = first->d;
+        if (second->type == INT_TYPE){
+            dtotal = dtotal / second->i;
+        } else if (second->type == DOUBLE_TYPE){
+            dtotal = dtotal / second->d;
+        } else {
+            error(6);
+        }
+        ret->type = DOUBLE_TYPE;
+        ret->d = dtotal;
+    } else {
+        error(6);
     }
     return ret;
 }
