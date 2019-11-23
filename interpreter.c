@@ -305,7 +305,7 @@ Value *lookUpSymbol(Value *expr, Frame *frame){
 }
 
 Value *evalEach(Value *args, Frame *frame){
-    printf("My args have not been evaled");
+    printf("My args have not been evaled\n");
     printTree2(args);
     printf("\n");
     Value *current = args;
@@ -313,17 +313,22 @@ Value *evalEach(Value *args, Frame *frame){
     while (current->type != NULL_TYPE){
         printf("This is what I'm gonna eval\n");
         printTree2(current);
+        printf("\n");
+        printf("car(current):\n");
+        printTree2(car(current));
+        //printf("cdr(car(current)):\n");
+        //printTree2(cdr(car(current)));
         Value *firstEval = eval(car(current), frame);
-        // if (firstEval->type == CLOSURE_TYPE){
-        //     printf("I'm trying to eval a closure type\n");
-        //     printTree2(firstEval);
-        //     firstEval = apply(firstEval, cdr(args));
-        // }
+        if (firstEval->type == CLOSURE_TYPE){
+             printf("I'm trying to eval a closure type\n");
+             printTree2(firstEval);
+             firstEval = apply(firstEval, cdr(car(current)));
+        }
         evaledArgs = cons(firstEval, evaledArgs);
         current = cdr(current);
     }
     evaledArgs = reverse(evaledArgs);
-    printf("My args have been evaled");
+    printf("My args have been evaled\n");
     printTree2(evaledArgs);
     printf("\n");
     return evaledArgs;
@@ -464,7 +469,7 @@ Value *apply(Value *function, Value *args){
         frame->bindings = cons(param, frame->bindings);
     }
     else {
-        while (current->type != NULL_TYPE){
+        while (current->type != NULL_TYPE && currentParam->type != NULL_TYPE){
             Value *param = cons(car(currentParam), car(current));
             frame->bindings = cons(param, frame->bindings);
             current = cdr(current);
@@ -511,9 +516,11 @@ Value *eval(Value *expr, Frame *frame){
             Value *temp = car(expr);
             if (temp->type != CONS_TYPE){
                 if (length(expr) > 1){
+                    printf("if case\n");
                     temp = expr;
                 }
                 else{
+                    printf("else case\n");
                     return eval(temp, frame);
                 }
             }
@@ -988,6 +995,7 @@ void interpret(Value *tree){
             } else {
                 printTree2(answer);
             }
+            printf("\n");
             printf("\n");
         }
     }

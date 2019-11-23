@@ -6,6 +6,8 @@
 (cons (lambda () 1) (lambda () 2))
 (cons ((lambda () 1)) ((lambda () 2)))
 
+((lambda () 1))
+
 (define fun2
     (lambda (x y)
         (+ (x) (y))))
@@ -14,3 +16,5 @@
 
 ((lambda (x y ) (+ x y)) 3 4)
 ((lambda () (+ 3 4)))
+
+

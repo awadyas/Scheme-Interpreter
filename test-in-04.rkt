@@ -9,4 +9,4 @@
           (+ (x4) (x5))
           (B)))))
 
-(A 0 (lambda () 1) (lambda () -1) (lambda () -1) (lambda () 1) (lambda () 0))
+(A 10 (lambda () 1) (lambda () -1) (lambda () -1) (lambda () 1) (lambda () 0))
