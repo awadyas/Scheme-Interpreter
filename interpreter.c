@@ -109,8 +109,8 @@ void printTreeValue(Value *value){
                 }
                 break;
             case CLOSURE_TYPE:
-                printTree2(value->cl.functionCode);
-                printf("\n");
+                //printTree2(value->cl.functionCode);
+                //printf("\n");
                 printf("#<procedure>");
                 break;
             case VOID_TYPE:
@@ -304,33 +304,19 @@ Value *lookUpSymbol(Value *expr, Frame *frame){
     return expr;
 }
 
+//Problem is that it is now trying to eval all functions and not pass some 
 Value *evalEach(Value *args, Frame *frame){
-    printf("My args have not been evaled\n");
-    printTree2(args);
-    printf("\n");
     Value *current = args;
     Value *evaledArgs = makeNull();
     while (current->type != NULL_TYPE){
-        printf("This is what I'm gonna eval\n");
-        printTree2(current);
-        printf("\n");
-        printf("car(current):\n");
-        printTree2(car(current));
-        //printf("cdr(car(current)):\n");
-        //printTree2(cdr(car(current)));
         Value *firstEval = eval(car(current), frame);
-        if (firstEval->type == CLOSURE_TYPE){
-             printf("I'm trying to eval a closure type\n");
-             printTree2(firstEval);
-             firstEval = apply(firstEval, cdr(car(current)));
+        if (firstEval->type == CLOSURE_TYPE && car(current)->type == CONS_TYPE && length(car(current))==1){
+            firstEval = apply(firstEval, cdr(car(current)));
         }
         evaledArgs = cons(firstEval, evaledArgs);
         current = cdr(current);
     }
     evaledArgs = reverse(evaledArgs);
-    printf("My args have been evaled\n");
-    printTree2(evaledArgs);
-    printf("\n");
     return evaledArgs;
 }
 
@@ -388,9 +374,6 @@ Value *evalBegin(Value *args, Frame *frame){
 }
 
 Value *evalLambda(Value *args, Frame *frame){
-    //printf("\nHello I made it to evalLambda- args:");
-    //printTree2(args);
-    //printf("\n");
     if (length(args) != 2){
         error(3);
     }
@@ -455,7 +438,6 @@ Value *applyPrimitive(Value *function, Value *args){
 
 Value *apply(Value *function, Value *args){
     assert(function->type == CLOSURE_TYPE);
-    printf("I'm applying here\n");
     if (function->cl.paramNames->type == CONS_TYPE){
         assert(length(args) == length(function->cl.paramNames));
     }
@@ -516,12 +498,15 @@ Value *eval(Value *expr, Frame *frame){
             Value *temp = car(expr);
             if (temp->type != CONS_TYPE){
                 if (length(expr) > 1){
-                    printf("if case\n");
                     temp = expr;
-                }
-                else{
-                    printf("else case\n");
-                    return eval(temp, frame);
+                } else{
+                    Value *tempEval = eval(temp,frame);
+                    if (tempEval->type == CLOSURE_TYPE){
+                        Value *nullArgs = talloc(sizeof(Value));
+                        nullArgs->type = CONS_TYPE;
+                        tempEval = apply(tempEval, nullArgs);
+                    }
+                    return tempEval;
                 }
             }
             Value *first = car(temp);
@@ -576,12 +561,8 @@ Value *eval(Value *expr, Frame *frame){
                 Value *evaledOperator = eval(first, frame);
                 Value *evaledArgs = evalEach(args, frame);
                 if (evaledOperator->type == CLOSURE_TYPE){
-                    printf("I tried to call eval\n");
                     return apply(evaledOperator, evaledArgs);
                 } else if (evaledOperator->type == PRIMITIVE_TYPE){
-                    //printf("EvaledArgs: ");
-                    //printTree2(evaledArgs);
-                    //printf("\n");
                     return applyPrimitive(evaledOperator, evaledArgs);
                 } else {
                     error(1);
@@ -620,9 +601,6 @@ Value *primitiveAdd(Value *args){
         } else if (car(args)->type == DOUBLE_TYPE){
             total += car(args)->d;
         } else {
-            printf("This is causing the error: ");
-            printTree2(car(args));
-            printf("\n");
             error(6);
         }
         args = cdr(args);
@@ -995,7 +973,6 @@ void interpret(Value *tree){
             } else {
                 printTree2(answer);
             }
-            printf("\n");
             printf("\n");
         }
     }
