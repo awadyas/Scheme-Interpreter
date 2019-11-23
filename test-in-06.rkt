@@ -25,10 +25,10 @@
 
 (define z 7)
 
-(letrec ((x z) (y z))
+(letrec ((x z) (y z) (m 3))
     x)
 
 ;;this example is ~funky~
 (define y 5)
 (letrec ((x y) (y x))
-    x)
+   x)

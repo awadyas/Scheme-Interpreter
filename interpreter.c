@@ -113,8 +113,6 @@ void printTreeValue(Value *value){
                 }
                 break;
             case CLOSURE_TYPE:
-                //printTree2(value->cl.functionCode);
-                //printf("\n");
                 printf("#<procedure>");
                 break;
             case VOID_TYPE:
@@ -275,33 +273,17 @@ Value *evalLetRec(Value *args, Frame *frame){
         newFrame->bindings = cons(cell, newFrame->bindings);
         currentVal = cdr(currentVal);
     }
-
-    //Checking to make sure a variable is not used before initialization
-    
-    /*currentVal = car(args);
-    currentVal = cdr(currentVal);
-    Value *lookingFor = newFrame->bindings;
-    while (currentVal->type != NULL_TYPE){
-        printf("car(car(lookingFor))->s %s\n", car(car(lookingFor))->s);
-        printf("Type of car(car(currentVal)): %i\n", car(car(currentVal))->type);
-        
-        if (!strcmp(car(car(lookingFor))->s, car(car(currentVal))->s)){
-            printf("car(car(lookingFor))->s %s\n", car(car(lookingFor))->s);
-            printf("car(car(currentVal))->s %s\n", car(car(currentVal))->s);
-
-            error(15);
-        }
-        currentVal = cdr(cdr(currentVal));
-        lookingFor = cdr(lookingFor);
-    }*/
-
     currentVal = car(args);
     while (currentVal->type != NULL_TYPE){
         Value *value = car(currentVal);
         Value *evalu = eval(cdr(value), newFrame);
+        if (evalu->type == VOID_TYPE){
+            error(15);
+        }
         Value *currentBinding = newFrame->bindings;
         while (currentBinding->type != NULL_TYPE){
-            if (!strcmp(car(currentBinding)->s, value->s)){
+            evalu = eval(cdr(value), newFrame);
+            if (!strcmp(car(car(currentBinding))->s, car(value)->s)){
                 car(currentBinding)->c.cdr = evalu;
                 break;
             }
@@ -328,7 +310,6 @@ Value *lookUpSymbol(Value *expr, Frame *frame){
     return expr;
 }
 
-//Problem is that it is now trying to eval all functions and not pass some 
 Value *evalEach(Value *args, Frame *frame){
     Value *current = args;
     Value *evaledArgs = makeNull();
@@ -950,7 +931,6 @@ Value *primitiveAppend(Value *args) {
 }
 
 void bind(char *name, Value *(*function)(struct Value *), Frame *frame) {
-    // Add primitive functions to top-level bindings list
     Value *value = talloc(sizeof(Value));
     value->type = PRIMITIVE_TYPE;
     value->pf = function;
