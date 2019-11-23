@@ -11,4 +11,4 @@
 
 (A 10 (lambda () 1) (lambda () -1) (lambda () -1) (lambda () 1) (lambda () 0))
 
-(load "test-in-01.rkt")
+;;(load "test-in-01.rkt")

@@ -71,6 +71,10 @@ void error(int status){
             printf("Error: Parameters must be symbols\n");
             break;
         }
+        case 15: {
+            printf("Error: Cannot use variable before initialization\n");
+            break;
+        }
     }
     texit(1);
 }
@@ -271,6 +275,26 @@ Value *evalLetRec(Value *args, Frame *frame){
         newFrame->bindings = cons(cell, newFrame->bindings);
         currentVal = cdr(currentVal);
     }
+
+    //Checking to make sure a variable is not used before initialization
+    
+    /*currentVal = car(args);
+    currentVal = cdr(currentVal);
+    Value *lookingFor = newFrame->bindings;
+    while (currentVal->type != NULL_TYPE){
+        printf("car(car(lookingFor))->s %s\n", car(car(lookingFor))->s);
+        printf("Type of car(car(currentVal)): %i\n", car(car(currentVal))->type);
+        
+        if (!strcmp(car(car(lookingFor))->s, car(car(currentVal))->s)){
+            printf("car(car(lookingFor))->s %s\n", car(car(lookingFor))->s);
+            printf("car(car(currentVal))->s %s\n", car(car(currentVal))->s);
+
+            error(15);
+        }
+        currentVal = cdr(cdr(currentVal));
+        lookingFor = cdr(lookingFor);
+    }*/
+
     currentVal = car(args);
     while (currentVal->type != NULL_TYPE){
         Value *value = car(currentVal);
